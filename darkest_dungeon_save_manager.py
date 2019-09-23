@@ -28,16 +28,19 @@ def copy_and_overwrite_folder(src, dst, symlinks=False, ignore=None):
     copytree(src, dst, symlinks, ignore)
 
 
-def get_last_save_num():
+def get_folder_names():
     folders = []
-    folder_numbers = []
     for r, d, f in os.walk(BACKUP_PATH):
         folders.append(d)
+    return folders[0]
 
-    folders = folders[0]
-    for folder_name in folders:
+
+def get_last_save_num():
+    folder_numbers = []
+    folder_names = get_folder_names()
+
+    for folder_name in folder_names:
         folder_numbers.append(int(folder_name.split(' - ')[0]))
-    # folders = list(map(int, folders))
     return max(folder_numbers)
 
 
@@ -52,20 +55,37 @@ def backup_save(name=''):
     copytree(SAVE_PATH, new_save_path)
 
     sys.stdout.write('Saved as: "' + new_save_name + '", ' + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(
-        os.path.getmtime(new_save_path))))
+        os.path.getmtime(new_save_path))) + '\n')
 
 
-def open_save_location_in_explorer():
-    subprocess.Popen(r"explorer /select," + SAVE_PATH)
+def backup_save_with_name():
+    name = input('Enter save name: ')
+    backup_save(" - " + name)
+
+
+def get_last_save_name():
+    save_names = sorted(get_folder_names(), key=lambda x: int(x.split(' ')[0]))
+    return save_names[-1]
+
+
+def load_save_with_name(name):
+    last_save_path = BACKUP_PATH + str(name)
+    copy_and_overwrite_folder(last_save_path, SAVE_PATH)
+    sys.stdout.write("Loaded save: " + name + ", last modified: " + time.strftime('%Y-%m-%d %H:%M:%S',
+                                                                                  time.localtime(
+                                                                                      os.path.getmtime(
+                                                                                          last_save_path))))
 
 
 def load_last_save():
-    last_save_num = get_last_save_num()
-    last_save_path = BACKUP_PATH + str(last_save_num)
-    copy_and_overwrite_folder(last_save_path, SAVE_PATH)
+    load_save_with_name(get_last_save_name())
 
-    print("Loaded save nr ", last_save_num, ", last modified:",
-          time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(os.path.getmtime(last_save_path))))
+
+def load_save_with_num():
+    num = input("Enter number: ")
+    save_names = sorted(get_folder_names(), key=lambda x: int(x.split(' ')[0]))
+    save_name = [name for name in save_names if name.startswith(num)][0]
+    load_save_with_name(save_name)
 
 
 def list_saves():
@@ -76,29 +96,40 @@ def list_saves():
     folders = folders[0]
     save_names = sorted(folders, key=lambda x: int(x.split(' ')[0]))
 
+    col_width = max(len(name) for name in save_names) + 2
+    print(col_width)
     for folder_name in save_names:
-        print(folder_name, " - ",
-              time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(os.path.getmtime(BACKUP_PATH + folder_name))))
+        sys.stdout.write("".join(folder_name.ljust(col_width)))
+        sys.stdout.write(
+            time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(os.path.getmtime(BACKUP_PATH + folder_name))) + '\n')
+        # print(folder_name, " - \t\t\t\t",
+        #       time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(os.path.getmtime(BACKUP_PATH + folder_name))))
+    input("Press Enter to continue...\n")
 
 
-def backup_save_with_name():
-    name = input('Enter save name: ')
-    backup_save(" - " + name)
+def open_save_location_in_explorer():
+    subprocess.Popen(r"explorer /select," + SAVE_PATH)
 
 
 # Menu
-action = int(input("Darkest Dungeon save manager:\n"
-                   "1 - backup save\n"
-                   "2 - backup save with name\n"
-                   "3 - load last save\n"
-                   "4 - list saves\n"
-                   "5 - open save location in explorer\n"))
-switcher = {
-    1: backup_save,
-    2: backup_save_with_name,
-    3: load_last_save,
-    4: list_saves,
-    5: open_save_location_in_explorer
-}
-func = switcher.get(action, lambda: 'Invalid action')
-func()
+while True:
+    action = int(input("<-- Darkest Dungeon save manager -->\n"
+                       "1 - backup save\n"
+                       "2 - backup save with name\n"
+                       "3 - load last save\n"
+                       "4 - load save with num\n"
+                       "5 - list saves\n"
+                       "6 - open save location in explorer\n"
+                       "0 - exit\n"))
+    switcher = {
+        1: backup_save,
+        2: backup_save_with_name,
+        3: load_last_save,
+        4: load_save_with_num,
+        5: list_saves,
+        6: open_save_location_in_explorer
+    }
+    func = switcher.get(action, lambda: 'Invalid action')
+    func()
+    if action == 0:
+        break
