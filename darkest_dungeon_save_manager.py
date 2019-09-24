@@ -1,16 +1,19 @@
 import os
+import re
 import shutil
 import subprocess
 import sys
 import time
 
 # VALUES TO MODIFY
-PROFILE_NUMBER = 0
-SAVES_PATH = 'F:\\Games\\Steam\\userdata\\46587789\\262060\\remote\\'
+PROFILE_NUMBER = '-1'
+SAVES_PATH = ''
 #
 
-SAVE_PATH = SAVES_PATH + 'profile_' + str(PROFILE_NUMBER) + '\\'
-BACKUP_PATH = SAVES_PATH + 'manual backup\\'
+CONFIG_FILE_NAME = 'darkest save.config'
+
+SAVE_PATH = SAVES_PATH + '\\profile_' + str(PROFILE_NUMBER) + '\\'
+BACKUP_PATH = SAVES_PATH + '\\manual backup\\'
 
 
 def copytree(src, dst, symlinks=False, ignore=None):
@@ -74,7 +77,7 @@ def load_save_with_name(name):
     sys.stdout.write("Loaded save: " + name + ", last modified: " + time.strftime('%Y-%m-%d %H:%M:%S',
                                                                                   time.localtime(
                                                                                       os.path.getmtime(
-                                                                                          last_save_path))))
+                                                                                          last_save_path))) + "\n")
 
 
 def load_last_save():
@@ -97,22 +100,70 @@ def list_saves():
     save_names = sorted(folders, key=lambda x: int(x.split(' ')[0]))
 
     col_width = max(len(name) for name in save_names) + 2
-    print(col_width)
     for folder_name in save_names:
         sys.stdout.write("".join(folder_name.ljust(col_width)))
         sys.stdout.write(
             time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(os.path.getmtime(BACKUP_PATH + folder_name))) + '\n')
         # print(folder_name, " - \t\t\t\t",
         #       time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(os.path.getmtime(BACKUP_PATH + folder_name))))
-    input("Press Enter to continue...\n")
 
 
 def open_save_location_in_explorer():
     subprocess.Popen(r"explorer /select," + SAVE_PATH)
 
 
+def update_paths():
+    global SAVE_PATH, BACKUP_PATH
+    SAVE_PATH = SAVES_PATH + '\\profile_' + str(PROFILE_NUMBER) + '\\'
+    BACKUP_PATH = SAVES_PATH + '\\manual backup\\'
+
+
+def update_config():
+    global config_file, SAVE_PATH, BACKUP_PATH, PROFILE_NUMBER
+    config = 'PROFILE_NUMBER = ' + PROFILE_NUMBER + '\nSAVE_LOCATION = ' + SAVES_PATH
+    config_file = open(CONFIG_FILE_NAME, 'w')
+    config_file.write(config)
+    update_paths()
+    config_file.close()
+
+
+def set_save_location():
+    global SAVES_PATH
+    SAVES_PATH = input("Enter save path: ")
+    update_config()
+
+
+def choose_profile():
+    global PROFILE_NUMBER
+    PROFILE_NUMBER = input("Enter profile number (they start from 0): ")
+    update_config()
+
+
+def load_save_location_and_profile_num():
+    global config_file, PROFILE_NUMBER, SAVES_PATH
+    if os.path.exists(CONFIG_FILE_NAME):
+        config_file = open(CONFIG_FILE_NAME, 'r')
+        config = config_file.read()
+
+        PROFILE_NUMBER = re.search('PROFILE_NUMBER = (.*)\nSAVE_LOCATION = ', config).group(1)
+        SAVES_PATH = config.split("\nSAVE_LOCATION = ")[1]
+        update_paths()
+        print('Loaded profile =', PROFILE_NUMBER, ' and SAVES PATH = ' + SAVES_PATH)
+    else:
+        print('You must set save path (exp. F:\\Games\\Steam\\userdata\\46587789\\262060\\remote)')
+        set_save_location()
+        print('And choose profile')
+        choose_profile()
+
+
+load_save_location_and_profile_num()
 # Menu
+first_command = True
 while True:
+    if first_command == False:
+        input("Press Enter to continue...\n")
+    else:
+        first_command = False
     action = int(input("<-- Darkest Dungeon save manager -->\n"
                        "1 - backup save\n"
                        "2 - backup save with name\n"
@@ -120,6 +171,8 @@ while True:
                        "4 - load save with num\n"
                        "5 - list saves\n"
                        "6 - open save location in explorer\n"
+                       "7 - set save location\n"
+                       "8 - choose profile\n"
                        "0 - exit\n"))
     switcher = {
         1: backup_save,
@@ -127,7 +180,9 @@ while True:
         3: load_last_save,
         4: load_save_with_num,
         5: list_saves,
-        6: open_save_location_in_explorer
+        6: open_save_location_in_explorer,
+        7: set_save_location,
+        8: choose_profile
     }
     func = switcher.get(action, lambda: 'Invalid action')
     func()
