@@ -1,3 +1,3 @@
 # darkest-dungeon-save-manager
 
-Download compiled version: [click](bit.ly/darkestSaveManager)
+Download compiled version: [click](http://bit.ly/darkestSaveManager)
