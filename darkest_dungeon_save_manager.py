@@ -43,7 +43,10 @@ def get_last_save_num():
     folder_names = get_folder_names()
 
     for folder_name in folder_names:
-        folder_numbers.append(int(folder_name.split(' - ')[0]))
+        try:
+            folder_numbers.append(int(folder_name.split(' - ')[0]))
+        except ValueError:
+            print("Folder name: " + folder_name + " incorrect!")
     return max(folder_numbers)
 
 
@@ -91,13 +94,35 @@ def load_save_with_num():
     load_save_with_name(save_name)
 
 
+def get_folder_number(folder_name):
+    try:
+        return int(folder_name.split(' ')[0])
+    except ValueError:
+        return -1
+
+
+def check_if_folder_name_correct(folder_name):
+    folder_number = get_folder_number(folder_name)
+    if folder_number == -1:
+        return False
+    else:
+        return True
+
+
+def remove_incorrect_folder_names(folder_names: list):
+    for folder_name in folder_names:
+        if not check_if_folder_name_correct(folder_name):
+            folder_names.remove(folder_name)
+
+
 def list_saves():
     folders = []
     for r, d, f in os.walk(BACKUP_PATH):
         folders.append(d)
 
     folders = folders[0]
-    save_names = sorted(folders, key=lambda x: int(x.split(' ')[0]))
+    remove_incorrect_folder_names(folders)
+    save_names = sorted(folders, key=lambda x: get_folder_number(x))
 
     col_width = max(len(name) for name in save_names) + 2
     for folder_name in save_names:
